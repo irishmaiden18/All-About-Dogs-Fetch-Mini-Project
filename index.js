@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////API URL
 const DOG_TEXT_URL = "https://dogapi.dog/api/v2/"
-const DOG_PIC_URL = "https://dog.ceo/api/breeds/image"
+const DOG_PIC_URL = "https://dog.ceo/api/breeds/image/random/"
 
 ///////////////////////////////////////////////////////////DOM Elements
 const loadingIndicator = document.querySelector("#loading-indicator")
@@ -70,7 +70,7 @@ async function initialize() {
 
 //get an array of 10 random dog images from the API
 async function getDogPics() {
-    const response = await fetch (`${DOG_PIC_URL}/12/random`)
+    const response = await fetch (DOG_PIC_URL + 12)
     const picObj = await response.json()
     // console.log(picObj)
     dogPics = picObj.message
