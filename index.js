@@ -1,21 +1,30 @@
 //////////////////////////////////////////////////////////////API URL
-const DOG_TEXT_URL = "https://dogapi.dog/api/v2/"
+const DOG_TEXT_URL_FACTS = "https://dogapi.dog/api/v2/"
 const DOG_PIC_URL = "https://dog.ceo/api/breeds/image/random/"
+const DOG_TEXT_URL = "https://api.thedogapi.com/v1/"
+const API_KEY = "live_Tj6EtgW7jBe8zVFEeojq4WthuifUprW1JsOlcpHfGk2x10KPrMZIlMaLY83Pl70A"
 
 ///////////////////////////////////////////////////////////DOM Elements
 const loadingIndicator = document.querySelector("#loading-indicator")
 
+const oldError = document.getElementById("error-box")
+
 const randomDogPicsArea = document.querySelector("#random-dog-pics-area")
 
 const dogFactsList = document.querySelector("#random-dog-facts")
-const getNewDogFactsButton = document.querySelector("#get-new-dog-facts")
+const getNewDogFactsButton = document.querySelector
+("#get-new-dog-facts")
+const dogFactsArea = document.querySelector("#random-dog-facts-area")
 
 const breedName = document.querySelector("#breed-name")
+const breedImage = document.querySelector("#breed-image")
 const breedDescription = document.querySelector("#breed-description")
 const breedLifeSpan = document.querySelector("#breed-life-span")
-const breedMaleWeight = document.querySelector("#breed-male-weight")
-const breedFemaleWeight = document.querySelector("#breed-female-weight")
-const breedHypoallergenic = document.querySelector("#breed-hypoallergenic")
+const breedWeight = document.querySelector("#breed-weight")
+const breedGroup = document.querySelector("#breed-group")
+const breedTemperment = document.querySelector("#breed-temperment")
+const breedOrigin = document.querySelector("#breed-origin")
+const breedHistory = document.querySelector("#breed-history")
 
 const changeDogBreedArea = document.querySelector("#change-dog-breed-area")
 const dogBreedSelect = document.querySelector("#dog-breed-select")
@@ -43,12 +52,17 @@ async function initialize() {
         createDogPics(dogPics)
     })
 
+    // remove any old error box if the user is retrying
+    
+    if (oldError) oldError.remove()
+
     //get the array of 5 doc facts
     await getDogFacts()
+
     //add event listener to clear the fact area and replace them with new dog facts
     getNewDogFactsButton.addEventListener("click", () => {
         clearDogFacts()
-        console.log("got called")
+        // console.log("got called")
         getDogFacts()
     })
     
@@ -118,14 +132,40 @@ function clearDogPics() {
 
 //get an array of 5 dog facts from the API
 async function getDogFacts() {
-    const response = await fetch(DOG_TEXT_URL + "facts?limit=5")
-    const factObj = await response.json()
-    // console.log(factObj)
-    dogFacts = factObj.data
-    // console.log(dogFacts)
+    try {
+        const response = await fetch(DOG_TEXT_URL_FACTS + "facts?limit=5")
+        
+        // check if the network response failed
+        if (!response.ok) {
+            throw new Error (`Could not fetch dog data. Server status: ${response.status}`)
+        }
+    
+        const factObj = await response.json()
+        console.log(factObj)
+        dogFacts = factObj.data
+        console.log(dogFacts)
 
-    //populate the list of dog facts with the facts from the dogFacts array
-    dogFacts.forEach(fact => createDogFact(fact))
+        //populate the list of dog facts with the facts from the dogFacts array
+        dogFacts.forEach(fact => createDogFact(fact))
+    } catch (error) {
+        showDogError(error.message)
+    }
+}
+
+function showDogError(message) {
+    // create an error box element
+    const errorBox = document.createElement("div")
+    errorBox.id = "error-box"
+
+    errorBox.style.padding = "15px"
+    errorBox.style.backgroundColor = "white"
+    errorBox.style.border = "2px solid purple"
+    errorBox.style.borderRadius = "15px"
+
+    //add text to the box
+    errorBox.innerHTML = `<strong>Bark! Could not contact the external API</strong>`
+
+    dogFactsArea.prepend(errorBox)
 }
 
 //clear the dog facts list
@@ -145,11 +185,15 @@ function createDogFact(fact) {
 
 //get an array of all dog breeds in the API
 async function getAllDogBreeds() {
-    const response = await fetch(DOG_TEXT_URL + "breeds?page[size]=1000")
-    const breedObj = await response.json()
-    // console.log(breedObj)
-    allDogBreeds = breedObj.data
-    // console.log(allDogBreeds)
+    const response = await fetch(DOG_TEXT_URL + "breeds", {
+        method: 'GET',
+        headers: {
+            "x-api-key": API_KEY,
+            "content-type": "application/json"
+        }
+    })
+    allDogBreeds = await response.json()
+    console.log(allDogBreeds)
 }
 
 //get a random dog breed
@@ -161,41 +205,71 @@ function getRandomDogBreed(array) {
 
 //populate the featured dog breed section
 function populateFeaturedBreedSection(dogBreedObj) {
-    const breedAttributes = dogBreedObj.attributes
+    const breedAttributes = dogBreedObj
     breedName.textContent = breedAttributes.name
-    breedDescription.textContent = breedAttributes.description
-    breedLifeSpan.textContent = `${breedAttributes.life.min} - ${breedAttributes.life.max} years`
-    breedMaleWeight.textContent = `${breedAttributes.male_weight.min} - ${breedAttributes.male_weight.max} lbs`
-    breedFemaleWeight.textContent = `${breedAttributes.female_weight.min} - ${breedAttributes.female_weight.max} lbs`
-    
-    if (breedAttributes.hypoallergenic) {
-        breedHypoallergenic.textContent = `${breedAttributes.name}s are hypoallergenic`
-    } else{
-        breedHypoallergenic.textContent = `${breedAttributes.name}s are NOT hypoallergenic`
+
+    if (breedAttributes.image && breedAttributes.image.url) {
+        breedImage.src = breedAttributes.image.url
+        breedImage.removeAttribute("hidden")
+    } else if (breedAttributes.reference_image_id) {
+        // sometimes the API gives an ID instead of a full image object
+        breedImage.src = `https://thedogapi.com{breedAttributes.reference_image_id}.jpg`
+        breedImage.removeAttribute("hidden")
+    } else {
+        // If there is no image at all, keep it hidden
+        breedImage.src = ""
+        breedImage.setAttribute("hidden", "true")
     }
+    breedImage.style.width = "100px"
+
+    breedDescription.textContent = breedAttributes.description
+    breedLifeSpan.textContent = `${breedAttributes.life_span} years`
+    if (breedAttributes.weight.imperial.includes(";")) {
+        const original = breedAttributes.weight.imperial
+        const parts = original.split(";")
+        const male = parts[0]
+        const female = parts[1]
+        breedWeight.textContent = `${male} lbs, ${female} lbs`
+    } else {
+        breedWeight.textContent = `${breedAttributes.weight.imperial} lbs`
+    }
+
+    breedGroup.textContent = breedAttributes.breed_group
+
+    breedTemperment.textContent = breedAttributes.temperament
+    breedOrigin.textContent = breedAttributes.origin
+    breedHistory.textContent = breedAttributes.history
 }
 
 //create option for select menu to represent a dog breed
 function createDogBreedOption(dogBreedObj) {
     const newOption = document.createElement("option")
-    newOption.value = dogBreedObj.attributes.name
-    newOption.textContent = dogBreedObj.attributes.name
+    newOption.value = dogBreedObj.name
+    newOption.textContent = dogBreedObj.name
     dogBreedSelect.append(newOption)
 }
 
 //handle user selecting a new dog breed
 function handleDogBreedSelection(event) {
     const dogBreedName = event.target.value
-    featuredDogBreed = allDogBreeds.find(dogBreedObj => dogBreedObj.attributes.name == dogBreedName)
+    featuredDogBreed = allDogBreeds.find(dogBreedObj => dogBreedObj.name == dogBreedName)
     populateFeaturedBreedSection(featuredDogBreed)
 }
 
 //sets display of the loading indicator depending on if it's loading
 function setLoading(loading) {
-    if (loading) {
-        loadingIndicator.style.display = "block"
-    } else {
-        loadingIndicator.style.display = "none"
+    if (loadingIndicator) {
+        // find the image inside the loading indicator to size it
+        const loadingImg = loadingIndicator.querySelector("img");
+        if (loadingImg) {
+            loadingImg.style.width = "150px";
+            loadingImg.style.height = "auto";
+        }
+        if (loading) {
+            loadingIndicator.style.display = "block"
+        } else {
+            loadingIndicator.style.display = "none"
+        }
     }
 }
 
